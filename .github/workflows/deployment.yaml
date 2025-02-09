@@ -54,7 +54,7 @@ jobs:
         run: cat task-definition.json
 
       - name: echo pwd
-        run: echo $PWD
+        run: ls -la
       
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
