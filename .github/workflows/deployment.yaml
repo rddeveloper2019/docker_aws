@@ -39,3 +39,11 @@ jobs:
           docker build -t $AWS_REPOSITORY:$IMAGE_TAG .
           docker tag $AWS_REPOSITORY:$IMAGE_TAG ${{ secrets.AWS_ECR }}/$AWS_REPOSITORY:$IMAGE_TAG
           docker push ${{ secrets.AWS_ECR }}/$AWS_REPOSITORY:$IMAGE_TAG
+
+      - name: Download task definiton
+        run: |
+          aws ecs describe-task-definition --task-definition helloworldtaskv2 \
+          --query taskDefinition > task-definition.json
+
+      - name: Read task definition
+        run: cat task-definition.json
