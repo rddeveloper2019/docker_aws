@@ -8,6 +8,10 @@ on:
 env:
   AWS_REGION: eu-north-1
   AWS_REPOSITORY: helloworldrepository
+  ECS_TASK_DEFINITION: .aws/task-definition.json
+  CONTAINER_NAME: helloworldcontainerv2
+  ECS_SERVICE: helloworlddockerservicev2
+  ECS_CLUSTER: helloworldcluster1212
 
 jobs:
   deploy:
@@ -30,20 +34,37 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@62f4f872db3836360b72999f4b87f1ff13310f3a
 
-      # - name: Build, tag, and push image to Amazon ECR
-      #   id: build-image
-      #   env:
-      #     IMAGE_TAG: ${{ github.sha }}
-      #   run: |
-      #     aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR }}
-      #     docker build -t $AWS_REPOSITORY:$IMAGE_TAG .
-      #     docker tag $AWS_REPOSITORY:$IMAGE_TAG ${{ secrets.AWS_ECR }}/$AWS_REPOSITORY:$IMAGE_TAG
-      #     docker push ${{ secrets.AWS_ECR }}/$AWS_REPOSITORY:$IMAGE_TAG
-
-      - name: Download task definiton
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          aws ecs describe-task-definition --task-definition helloworldtaskv2 \
-          --query taskDefinition > task-definition.json
+          aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR }}
+          docker build -t $AWS_REPOSITORY:$IMAGE_TAG .
+          docker tag $AWS_REPOSITORY:$IMAGE_TAG ${{ secrets.AWS_ECR }}/$AWS_REPOSITORY:$IMAGE_TAG
+          docker push ${{ secrets.AWS_ECR }}/$AWS_REPOSITORY:$IMAGE_TAG
+          echo "image=${{ secrets.AWS_ECR }}/$AWS_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Read task definition
-        run: cat task-definition.json
+      # - name: Download task definiton
+      #   run: |
+      #     aws ecs describe-task-definition --task-definition helloworldtaskv2 \
+      #     --query taskDefinition > task-definition.json
+
+      # - name: Read task definition
+      #   run: cat task-definition.json
+      
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+        with:
+          task-definition: $ECS_TASK_DEFINITION
+          container-name: $CONTAINER_NAME
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: $ECS_SERVICE
+          cluster: $ECS_CLUSTER 
+          wait-for-service-stability: true
