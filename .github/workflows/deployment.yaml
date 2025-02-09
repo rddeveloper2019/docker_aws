@@ -54,7 +54,7 @@ jobs:
         run: cat task-definition.json
 
       - name: enableFaultInjection
-        run: run: echo "`jq '.enableFaultInjection=true' task-definition.json`" > task-definition.json
+        run: echo "`jq '.enableFaultInjection=true' task-definition.json`" > task-definition.json
       
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
